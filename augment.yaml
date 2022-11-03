@@ -1,0 +1,14 @@
+rotate: 60 # degree
+
+dropout_prob: 0.8
+dropout_n: 1
+dropout_size: 0.5
+
+cutout_pad_factor: 0.1
+
+sature: [0.9, 1.1]
+contrast: [0.9, 1.1]
+brightness: 0.1
+hue: ~
+
+solarize_threshold: 0.5
