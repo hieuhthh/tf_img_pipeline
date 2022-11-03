@@ -1,0 +1,18 @@
+route: ./
+seed: 42
+im_size: 112
+label_mode: cate_int
+BATCH_SIZE: 1024
+
+valid_ratio: 0.1
+test_ratio: ~
+
+train_with_labels: True
+train_repeat: True
+train_shuffle: 8192
+train_augment: False
+
+valid_with_labels: True
+valid_repeat: False
+valid_shuffle: False
+valid_augment: False
