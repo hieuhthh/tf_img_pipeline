@@ -5,6 +5,8 @@ import numpy as np
 from sklearn.model_selection import KFold, StratifiedKFold
 import tensorflow as tf
 
+from augment import *
+
 def get_data_from_phrase(route, phrase=None):
     """
     input:
@@ -87,9 +89,12 @@ def auto_split_data(route, fold, valid_fold=None, test_fold=None, stratified=Fal
 
         return X_train, Y_train, all_class
 
-def build_decoder(with_labels=True, label_mode='int', all_class=None, target_size=(256, 256)):
+def build_decoder(with_labels=True, label_mode='int', all_class=None, target_size=(256, 256), im_size_before_crop=None):
     def decode_img_preprocess(img):
-        img = tf.image.resize(img, target_size)
+        if im_size_before_crop is None:
+            img = tf.image.resize(img, target_size)
+        else:
+            img = tf.image.resize(img, (im_size_before_crop, im_size_before_crop))
         img = tf.cast(img, tf.float32) / 255.0
         return img
 
@@ -120,7 +125,7 @@ def build_decoder(with_labels=True, label_mode='int', all_class=None, target_siz
     return decode_with_labels if with_labels else decode_img
 
 def build_dataset(paths, labels=None, bsize=32,
-                  decode_fn=None, augment=False, 
+                  decode_fn=None, augment=None,
                   repeat=False, shuffle=1024,
                   cache=False, cache_dir=""):
     """
@@ -139,18 +144,22 @@ def build_dataset(paths, labels=None, bsize=32,
     dset = dset.repeat() if repeat else dset
     dset = dset.shuffle(shuffle) if shuffle else dset
     dset = dset.map(decode_fn, num_parallel_calls=AUTO)
+    # dset = dset.map(augment, num_parallel_calls=AUTO) if augment is not None else dset
+    dset = dset.map(lambda x,y:(augment(x),y), num_parallel_calls=AUTO) if augment is not None else dset
     dset = dset.batch(bsize)
     dset = dset.prefetch(AUTO)
     
     return dset
 
 def build_dataset_from_X_Y(X_path, Y_int, all_class, with_labels, label_mode, img_size,
-                           batch_size, repeat, shuffle, augment):
+                           batch_size, repeat, shuffle, augment, im_size_before_crop=None):
     decoder = build_decoder(with_labels=with_labels, label_mode=label_mode, all_class=all_class, 
-                            target_size=img_size)
+                            target_size=img_size, im_size_before_crop=im_size_before_crop)
+
+    augment_img = build_augment() if augment else None
 
     dataset = build_dataset(X_path, Y_int, bsize=batch_size, decode_fn=decoder,
-                            repeat=repeat, shuffle=shuffle, augment=augment)
+                            repeat=repeat, shuffle=shuffle, augment=augment_img)
 
     return dataset
 
@@ -174,7 +183,7 @@ if __name__ == '__main__':
     
     train_n_images = len(Y_train)
     train_dataset = build_dataset_from_X_Y(X_train, Y_train, all_class, train_with_labels, label_mode, img_size,
-                                           BATCH_SIZE, train_repeat, train_shuffle, train_augment)
+                                           BATCH_SIZE, train_repeat, train_shuffle, train_augment, im_size_before_crop)
 
     valid_n_images = len(Y_valid)
     valid_dataset = build_dataset_from_X_Y(X_valid, Y_valid, all_class, valid_with_labels, label_mode, img_size,

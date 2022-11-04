@@ -1,14 +1,16 @@
-rotate: 60 # degree
+rotate_prob: 0.5 
+rotate: 10 # degree
 
-dropout_prob: 0.8
-dropout_n: 1
-dropout_size: 0.5
+cutout_prob: 0.2
+cutout_pad_factor: 0.2
 
-cutout_pad_factor: 0.1
-
+color_prob: 0.6
 sature: [0.9, 1.1]
 contrast: [0.9, 1.1]
 brightness: 0.1
 hue: ~
 
+solarize_prob: 0.2
 solarize_threshold: 0.5
+
+equalize_prob: 0.2

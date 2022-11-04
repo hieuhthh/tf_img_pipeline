@@ -3,6 +3,15 @@ from tensorflow.keras import backend as K
 import tensorflow_addons as tfa
 import math
 
+from utils import *
+
+def clip_image(image):
+    image -= tf.reduce_min(image)
+    image_max = tf.reduce_max(image)
+    if image_max != 0:
+        image = image / image_max
+    return image
+
 def rotate_image(image, rot):
     """
     rot: angle (0* - 180*)
@@ -20,7 +29,7 @@ def cutout(image, pad_factor, replace=None):
         return image
 
     if replace is None:
-        replace = tf.random.uniform(shape=[], minval=0, maxval=1., dtype=tf.float64)
+        replace = tf.random.uniform(shape=[], minval=0, maxval=1., dtype=tf.float32)
 
     image_height = tf.shape(image)[0]
     image_width = tf.shape(image)[1]
@@ -48,13 +57,6 @@ def cutout(image, pad_factor, replace=None):
 
 def solarize(image, threshold):
     return tf.where(image < threshold, image, 1 - image)
-
-def clip_image(image):
-    image -= tf.reduce_min(image)
-    image_max = tf.reduce_max(image)
-    if image_max != 0:
-        image = image / image_max
-    return image
 
 def equalize_image(image):
     """
@@ -106,14 +108,50 @@ def color_image(img, hue, sat, cont, bri):
     img = tf.image.random_brightness(img, bri) if bri is not None else img
     return img
 
-if __name__ == '__main__':
-    from utils import *
-    from multiprocess_dataset import *
+def build_augment():
+    setting_cfg = get_settings('setting.yaml')
+    aug_cfg = get_settings('augment.yaml')
 
-    settings = get_settings('setting.yaml')
-    globals().update(settings)
-    settings = get_settings('augment.yaml')
-    globals().update(settings)
+    def augment_img(img):
+        cnt = 0
+
+        P1 = tf.cast(tf.random.uniform([], 0, 1) < aug_cfg['color_prob'], tf.int32)
+        if P1 == 1:
+            img = color_image(img, aug_cfg['hue'], aug_cfg['sature'], aug_cfg['contrast'], aug_cfg['brightness'])
+            cnt += 1
+
+        P2 = tf.cast(tf.random.uniform([], 0, 1) < aug_cfg['rotate_prob'], tf.int32)
+        if P2 == 1:
+            img = rotate_image(img, aug_cfg['rotate'])
+            cnt += 1
+
+        P3 = tf.cast(tf.random.uniform([], 0, 1) < aug_cfg['cutout_prob'], tf.int32)
+        if cnt < 2 and P3 == 1:
+            img = cutout(img, aug_cfg['cutout_pad_factor'])
+            cnt += 1
+
+        P4 = tf.cast(tf.random.uniform([], 0, 1) < aug_cfg['solarize_prob'], tf.int32)
+        if cnt < 3 and P4 == 1:
+            img = solarize(img, aug_cfg['solarize_threshold'])
+            cnt += 1
+
+        P5 = tf.cast(tf.random.uniform([], 0, 1) < aug_cfg['equalize_prob'], tf.int32)
+        if cnt < 3 and P5 == 1:
+            img = equalize_image(img)
+            cnt += 1
+    
+        img = clip_image(img)
+
+        if setting_cfg['im_size_before_crop'] is not None:
+            img = tf.image.random_crop(img, size=(setting_cfg['im_size'], setting_cfg['im_size'], 3))
+
+        return img
+
+    return augment_img
+
+if __name__ == '__main__':
+    
+    from multiprocess_dataset import *
 
     import cv2
 
@@ -124,15 +162,20 @@ if __name__ == '__main__':
     img = img[...,::-1]
     img = img / 255.0
 
-    img = rotate_image(img, rotate)
+    augment_img = build_augment()
+    img = augment_img(img)
 
-    img = cutout(img, cutout_pad_factor)
+    # img = rotate_image(img, rotate)
 
-    img = color_image(img, hue, sature, contrast, brightness)
+    # img = cutout(img, cutout_pad_factor)
+
+    # img = color_image(img, hue, sature, contrast, brightness)
 
     # img = solarize(img, solarize_threshold)
 
-    img = equalize_image(img)
+    # img = equalize_image(img)
+
+    # img = clip_image(img)
 
     img = img.numpy()[...,::-1] * 255
     cv2.imwrite("sample_aug.png", img)

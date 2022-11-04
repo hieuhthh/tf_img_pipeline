@@ -1,6 +1,7 @@
 route: ./
 seed: 42
-im_size: 112
+im_size: 160
+im_size_before_crop: 180 # ~ for not using this
 label_mode: cate_int
 BATCH_SIZE: 1024
 
@@ -10,7 +11,7 @@ test_ratio: ~
 train_with_labels: True
 train_repeat: True
 train_shuffle: 8192
-train_augment: False
+train_augment: True
 
 valid_with_labels: True
 valid_repeat: False
