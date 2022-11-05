@@ -115,6 +115,14 @@ def build_augment():
     def augment_img(img):
         cnt = 0
 
+        P0_left_right = tf.cast(tf.random.uniform([], 0, 1) < aug_cfg['flip_left_right_prob'], tf.int32)
+        if P0_left_right == 1:
+            img = tf.image.flip_left_right(img)
+
+        P0_up_down = tf.cast(tf.random.uniform([], 0, 1) < aug_cfg['flip_up_down_prob'], tf.int32)
+        if P0_up_down == 1:
+            img = tf.image.flip_up_down(img)
+
         P1 = tf.cast(tf.random.uniform([], 0, 1) < aug_cfg['color_prob'], tf.int32)
         if P1 == 1:
             img = color_image(img, aug_cfg['hue'], aug_cfg['sature'], aug_cfg['contrast'], aug_cfg['brightness'])
@@ -150,10 +158,11 @@ def build_augment():
     return augment_img
 
 if __name__ == '__main__':
-    
-    from multiprocess_dataset import *
-
     import cv2
+    from utils import *
+    
+    settings = get_settings('augment.yaml')
+    globals().update(settings)
 
     sample_inp = '/home/huynx2/hieunmt/other/tf_img_pipeline/dataset/dataset00001/camA_id_00001_num_001.png'
     img = cv2.imread(sample_inp)
@@ -161,6 +170,7 @@ if __name__ == '__main__':
 
     img = img[...,::-1]
     img = img / 255.0
+    img = np.float32(img)
 
     augment_img = build_augment()
     img = augment_img(img)
@@ -175,7 +185,7 @@ if __name__ == '__main__':
 
     # img = equalize_image(img)
 
-    # img = clip_image(img)
+    img = clip_image(img)
 
     img = img.numpy()[...,::-1] * 255
     cv2.imwrite("sample_aug.png", img)
