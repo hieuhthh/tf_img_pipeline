@@ -87,6 +87,13 @@ model.compile(optimizer=Adam(learning_rate=1e-3),
               loss_weights=loss_weights,
               metrics=metrics)
 
+if pretrained is not None:
+    try:
+        model.load_weights(pretrained)
+        print('Loaded pretrain from', pretrained)
+    except:
+        print('Failed to load pretrain from', pretrained)
+
 save_path = f'best_model_{base_name}_{im_size}_{emb_dim}_{n_labels}.h5'
 
 callbacks = get_callbacks(monitor, mode, save_path, max_lr, min_lr, cycle_epoch, save_weights_only)

@@ -26,6 +26,8 @@ have_emb_layer: True
 emb_dim: 512
 use_normdense: True
 
+pretrained: ~
+
 arcface_label_smoothing: 0
 arcface_margin1: 1.0
 arcface_margin2: 0.5
